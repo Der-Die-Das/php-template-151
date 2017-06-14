@@ -1,6 +1,6 @@
 <?php
 
-namespace ihrname;
+namespace DerDieDas;
 
 /**
  * Simple Template-Engine which provides arguments into a template,

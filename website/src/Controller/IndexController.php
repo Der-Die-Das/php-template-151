@@ -1,29 +1,29 @@
 <?php
 
-namespace ihrname\Controller;
+namespace DerDieDas\Controller;
 
-use ihrname\SimpleTemplateEngine;
+use DerDieDas\SimpleTemplateEngine;
 
-class IndexController 
+class IndexController
 {
   /**
    * @var ihrname\SimpleTemplateEngine Template engines to render output
    */
   private $template;
-  
+
   /**
    * @param ihrname\SimpleTemplateEngine
    */
-  public function __construct(SimpleTemplateEngine $template)
+  public function __construct(\Twig_Environment $template)
   {
      $this->template = $template;
   }
 
   public function homepage() {
-    echo "INDEX";
+    echo $this->template->render("index.html.twig", ["user" => (array_key_exists("username", $_SESSION)) ? $_SESSION["username"] : ""]);
   }
 
   public function greet($name) {
-  	echo $this->template->render("hello.html.php", ["name" => $name]);
+  	echo $this->template->render("hello.html.twig", ["name" => $name]);
   }
 }
