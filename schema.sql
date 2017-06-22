@@ -1,85 +1,69 @@
+-- Adminer 4.2.5 MySQL dump
+
 SET NAMES utf8;
 SET time_zone = '+00:00';
 SET foreign_key_checks = 0;
 SET sql_mode = 'NO_AUTO_VALUE_ON_ZERO';
 
-SET NAMES utf8mb4;
-
-USE app;
-
-DROP TABLE IF EXISTS `category`;
-CREATE TABLE `category` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) CHARACTER SET utf8mb4 NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
-DROP TABLE IF EXISTS `comment`;
-CREATE TABLE `comment` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `postId` int(11) NOT NULL,
-  `userId` int(11) NOT NULL,
-  `content` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `postId` (`postId`),
-  KEY `userId` (`userId`),
-  CONSTRAINT `comment_ibfk_1` FOREIGN KEY (`postId`) REFERENCES `post` (`id`),
-  CONSTRAINT `comment_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
-DROP TABLE IF EXISTS `password_reset`;
-CREATE TABLE `password_reset` (
+DROP TABLE IF EXISTS `like`;
+CREATE TABLE `like` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
-  `reset_code` varchar(255) NOT NULL,
-  `reset_time` datetime NOT NULL,
+  `post_id` int(11) NOT NULL,
+  `isDislike` tinyint(4) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
-  CONSTRAINT `password_reset_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+  KEY `post_id` (`post_id`),
+  CONSTRAINT `like_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
+  CONSTRAINT `like_ibfk_2` FOREIGN KEY (`post_id`) REFERENCES `post` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
 DROP TABLE IF EXISTS `post`;
 CREATE TABLE `post` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `categoryId` int(11) NOT NULL,
-  `userId` int(11) NOT NULL,
-  `title` varchar(255) NOT NULL,
-  `content` varchar(255) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `title` varchar(255) CHARACTER SET armscii8 NOT NULL,
+  `content` varchar(500) CHARACTER SET armscii8 NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `categoryId` (`categoryId`),
-  KEY `userId` (`userId`),
-  CONSTRAINT `post_ibfk_1` FOREIGN KEY (`categoryId`) REFERENCES `category` (`id`),
-  CONSTRAINT `post_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `user` (`id`)
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `post_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+INSERT INTO `post` (`id`, `user_id`, `title`, `content`) VALUES
+(1,	3,	'First post!',	'This is my first post!'),
+(6,	3,	'Second Post',	'This is my Second Post');
 
-DROP TABLE IF EXISTS `topic`;
-CREATE TABLE `topic` (
+DROP TABLE IF EXISTS `right`;
+CREATE TABLE `right` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
+  `name` varchar(255) CHARACTER SET armscii8 NOT NULL,
+  `cancratecontent` tinyint(4) NOT NULL,
+  `candeleteanycontent` tinyint(4) NOT NULL,
+  `cancreateuser` tinyint(4) NOT NULL,
+  `candeleteuser` tinyint(4) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `topic` (`id`, `name`) VALUES
-(1,	'Gaming'),
-(2,	'Sports'),
-(3,	'Music');
+INSERT INTO `right` (`id`, `name`, `cancratecontent`, `candeleteanycontent`, `cancreateuser`, `candeleteuser`) VALUES
+(1,	'admin',	1,	1,	1,	1);
 
 DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `username` varchar(255) NOT NULL,
+  `right_id` int(11) NOT NULL,
   `email` varchar(255) NOT NULL,
-  `password` varchar(255) DEFAULT NULL,
-  `activated` tinyint(1) NOT NULL,
-  `activationstring` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `isActivated` tinyint(4) NOT NULL,
+  `activationCode` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
+  UNIQUE KEY `email` (`email`),
+  KEY `right_id` (`right_id`),
+  CONSTRAINT `user_ibfk_1` FOREIGN KEY (`right_id`) REFERENCES `right` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `user` (`id`, `username`, `email`, `password`, `activated`, `activationstring`) VALUES
-(13,	'test',	'der-die-das@hotmail.com',	'$2y$10$jw2OojM/81NZmqXlNoE1Z.dwVRLoN3UAouNTBnNkzyCNslyixpxUa',	1,	'b933417a6bbb0f817148079ff1e117c4'),
-(14,	'daniel',	'der-die-das2@hotmail.com',	'$2y$10$e66QDoiyYfbAEPwoq0QXo.lks2Vw/SNEnkDqBPpF.tCcglRDiO512',	1,	'8a208b3c55212ff5e61abb947a229378');
+INSERT INTO `user` (`id`, `right_id`, `email`, `password`, `isActivated`, `activationCode`) VALUES
+(3,	1,	'Der-Die-Das.1234567890@gmail.com',	'$2y$10$yXFHsEZaJt7aqD06nzUXE.6q7b.hx2MpumJpa6.wS3aXD8BulABcW',	1,	'jnv1DOwHWWRLoGqk'),
+(4,	1,	'mario.gwerder@gmail.com',	'$2y$10$8H0wdWJL28dA7/Z6kUhQeex8MLmXHsnMo6FIwfbI9Q.iyCqlNy8Xy',	1,	'DCj006wBPe2Q5Gv5');
+
+-- 2017-06-22 08:16:15

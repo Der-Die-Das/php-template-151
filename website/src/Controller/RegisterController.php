@@ -1,9 +1,10 @@
-<?php 
+<?php
 
-namespace DerDieDas\Controller;
+namespace Der-Die-Das\Controller;
 
-use DerDieDas\Service\RegisterService;
-use DerDieDas\Entity\UserEntity;
+use Der-Die-Das\SimpleTemplateEngine;
+use Der-Die-Das\Service\Register\RegisterService;
+use Der-Die-Das\Service\Security\CSRFProtectionService;
 
 class RegisterController
 {
@@ -12,82 +13,101 @@ class RegisterController
 	 */
 	private $template;
 	
-	/**
-	 * @var \RegisterService
-	 */
 	private $registerService;
-		
-	private $mailer;
 	
+	private $csrfService;
 	/**
 	 * @param ihrname\SimpleTemplateEngine
+	 * @param PDO
 	 */
-	public function __construct(\Twig_Environment $template, RegisterService $registerService, \Swift_Mailer $mailer)
+	public function __construct(SimpleTemplateEngine $template, RegisterService $registerService, CSRFProtectionService $csrfProtection)
 	{
 		$this->template = $template;
 		$this->registerService = $registerService;
-		$this->mailer= $mailer;
+		$this->csrfService = $csrfProtection;
 	}
 	
-
 	public function showRegister()
 	{
-		echo $this->template->render("register.html.twig");
+		echo $this->template->render("register.html.php", ["csrf" => $this->csrfService->getHtmlCode("csrfRegister")]);
 	}
 	
 	public function register(array $data)
 	{
-		if (!array_key_exists('username', $data) OR !array_key_exists('email', $data) OR !array_key_exists('password', $data) OR !array_key_exists('confirmPassword', $data))
+		if(array_key_exists("csrf", $data))
+		{
+			if(!$this->csrfService->validateToken("csrfRegister", $data["csrf"]))
+			{
+				$this->showRegister();
+				return;
+			}
+		}
+		else
 		{
 			$this->showRegister();
 			return;
 		}
-		 
-		if (empty($data["username"]) OR empty($data["email"]) OR empty($data["password"]))
+		if(!array_key_exists("email", $data) OR !array_key_exists("password", $data))
 		{
-			echo $this->template->render("register.html.twig", ["username" => $data['username'], "email" => $data['email']]);
+			$this->showRegister();
 			return;
 		}
-		 
-		if (!$this->registerService->userExists($data["username"], $data["email"]))
+		if($this->registerService->reg($data["email"], $data["password"]))
 		{
-			echo $this->template->render("register.html.twig", ["errorMessage" => "Username or Email exists already"]);
-			return;
+			header("Location: /");
 		}
-		 
-		if ($data["password"] == $data["confirmPassword"])
+		else 
 		{
-			$activationstring = md5(random_bytes(1000));
-			$user = new UserEntity($data["username"], $data["email"], password_hash($data["password"], PASSWORD_DEFAULT), 0, $activationstring);
-			$this->registerService->registerUser($user);
-			$this->mailer->send(
-					\Swift_Message::newInstance("User Activation")
-					->setFrom(['noreply@theforum.com'])
-					->setTo([$data["email"]])
-					->setBody(
-							'<html>' .
-							' <head></head>' .
-							' <body>' .
-							' <p>Hi ' . $data["username"] . '</p><p>You have successfully registered at The Forum. To finish your registration Click on the activation link below to activate
-  					your account.</p>' .
-							'<a href="https://'
-							. $_SERVER["HTTP_HOST"] .
-							'/activate/' . $activationstring . '">Activate</a>'.
-							' </body>' .
-							'</html>',
-							'text/html')
-					);
-			echo $this->template->render("registerConfirmation.html.twig");
-		}
-		else {
-			echo $this->template->render("register.html.twig", ["email" => $data["email"], "username" => $data["username"], "errorMessage" => "Passwords do not match"]);
+			$this->showRegister();
+			echo "User with this email already exists";
 		}
 	}
 	
-	public function activate($activationString)
+	public function activate(array $data)
 	{
-		$this->registerService->activateUser($activationString);
-		echo $this->template->render("activationConfirmation.html.twig");
+		if(!array_key_exists("url", $data) OR !array_key_exists("user_id", $data))
+		{
+			echo "Not found";
+			return;
+		}
+		else
+		{
+			$this->registerService->acti($data["url"], $data["user_id"]);
+		}
+	}
+	public function changePw(array $data)
+	{
+		if(array_key_exists("csrf", $data))
+		{
+			if(!$this->csrfService->validateToken("csrfChangePW", $data["csrf"]))
+			{
+				$this->showChangePw();
+				return;
+			}
+		}
+		else
+		{
+			$this->showChangePw();
+			return;
+		}
+		if(!array_key_exists("password", $data) OR !array_key_exists("code", $data))
+		{
+			$this->showChangePw();
+		}
+		else
+		{
+			$this->registerService->chpw($data["password"], $data["code"]);
+		}
+	}
+	
+	public function showChangePw()
+	{
+		echo $this->template->render("changePassword.html.php", ["csrf" => $this->csrfService->getHtmlCode("csrfChangePW")]);
+	}
+	
+	public function sendChangePwCode()
+	{
+		$this->registerService->sendCode();
 	}
 }
-
+		

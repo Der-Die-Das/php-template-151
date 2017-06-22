@@ -1,61 +1,68 @@
 <?php
 
-namespace DerDieDas\Controller;
+namespace Der-Die-Das\Controller;
 
-use DerDieDas\SimpleTemplateEngine;
-use DerDieDas\Service\LoginService;
-use DerDieDas\Entity\UserEntity;
+use Der-Die-Das\SimpleTemplateEngine;
+use Der-Die-Das\Service\Login\LoginService;
+use Der-Die-Das\Service\Security\CSRFProtectionService;
 
-class LoginController 
+class LoginController
 {
-  /**
-   * @var ihrname\SimpleTemplateEngine Template engines to render output
-   */
-  private $template;
-  
-  /**
-   * @var \LoginService
-   */
-  private $loginService;
-  
-  /**
-   * @param ihrname\SimpleTemplateEngine
-   */
-  public function __construct(\Twig_Environment $template, LoginService $loginService)
-  {
-     $this->template = $template;
-     $this->loginService = $loginService;
-  }
+	/**
+	 * @var ihrname\SimpleTemplateEngine Template engines to render output
+	 */
+	private $template;
 
-  public function showLogin()
-  {
-  	$_SESSION["token"] = md5(random_bytes(1000));
-  	echo $this->template->render("login.html.twig");
-  }
-  
-  public function login(array $data)
-  {
-  	$user = $this->loginService->getUser($data['username']);
-  	if(!array_key_exists('username', $data) OR !array_key_exists('password', $data))
-  	{
-  		$this->showLogin();
-  		return;
-  	}
-  	if($user->getActivated() AND password_verify($data['password'], $user->getPassword())){
-  		$_SESSION["username"] = $user->getUsername();
-  		header("Location: /");
-  	}else{
-  		echo $this->template->render("login.html.twig", ["username" => $data["username"], "errorMessage" => "Username or Password are not correct or your account has not been activated yet."]);  		
-  	}  		
-  	
-  }
-  
-  public function logout($token)
-  {
-  	if ($token == $_SESSION["token"])
-  	{
-	  	unset($_SESSION["username"]);
-	  	header("Location: /");
-  	}
-  }
+	private $loginService;
+	
+	private $csrfService;
+	/**
+	 * @param ihrname\SimpleTemplateEngine
+	 * @param PDO
+	 */
+	public function __construct(SimpleTemplateEngine $template, LoginService $loginService, CSRFProtectionService $csrfService)
+	{
+		$this->template = $template;
+		$this->loginService = $loginService;
+		$this->csrfService = $csrfService;
+	}
+
+	public function showLogin() 
+	{
+		echo $this->template->render("login.html.php", ["csrf" => $this->csrfService->getHtmlCode("csrfLogin")]);
+	}
+	
+	public function login(array $data) 
+	{
+		if(array_key_exists("csrf", $data)) 
+		{
+			if(!$this->csrfService->validateToken("csrfLogin", $data["csrf"])) 
+			{
+				$this->showLogin();
+				return;
+			}
+		}
+		else
+		{
+			$this->showLogin();
+			return;
+		}
+		if(!array_key_exists("email", $data) OR !array_key_exists("password", $data))
+		{
+			$this->showLogin();
+			return;
+		}
+		
+		
+		if($this->loginService->authenticate($data["email"], $data["password"]))
+		{
+			$_SESSION["user_id"] = $this->loginService->getUserIdByEmail($data["email"]);
+			$_SESSION["email"] = $data["email"];
+			header('Location: /');
+		}
+		else 
+		{
+			echo $this->template->render("login.html.php", ["email" => $data["email"] , "csrf" => $this->csrfService->getHtmlCode("csrfLogin")]);
+		}
+	}
 }
